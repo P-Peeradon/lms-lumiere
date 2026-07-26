@@ -10,11 +10,15 @@ export default definePlugin(async (nitroApp: NitroApp) => {
 
   try {
     // Execute DDL statement to ensure your table exists
+    // CREDENTIAL(shadow_id, hashed_password, hashed_username, role);
     await db.sql`
         CREATE TABLE IF NOT EXISTS credentials (
         shadow_id CHAR(9) PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL
+        hashed_username TEXT UNIQUE NOT NULL,
+        hashed_password TEXT NOT NULL,
+        user_role TEXT NOT NULL,
+        mfa BOOLEAN NOT NULL,
+        CONSTRAINT validate_role CHECK (user_role IN ('student', 'instructor', 'faculty_admin', 'central_admin', 'system_admin'))
       );
     `;
     console.log('✅ Database schema ready.');
