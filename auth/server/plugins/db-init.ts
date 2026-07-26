@@ -16,11 +16,15 @@ export default definePlugin(async (nitroApp: NitroApp) => {
         shadow_id CHAR(9) PRIMARY KEY,
         hashed_username TEXT UNIQUE NOT NULL,
         hashed_password TEXT NOT NULL,
-        user_role TEXT NOT NULL,
-        mfa BOOLEAN NOT NULL,
-        CONSTRAINT validate_role CHECK (user_role IN ('student', 'instructor', 'faculty_admin', 'central_admin', 'system_admin'))
+        user_role ENUM('student', 'instructor', 'faculty_admin', 'central_admin', 'system_admin') NOT NULL,
+        mfa BOOLEAN NOT NULL
       );
     `;
+
+    await db.sql`
+      CREATE INDEX username_idx 
+      ON credentials (hashed_username);
+    `
     console.log('✅ Database schema ready.');
   } catch (error) {
     console.error('❌ Failed to initialise database schema:', error);
