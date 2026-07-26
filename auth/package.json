@@ -13,5 +13,8 @@
     "@types/node": "latest",
     "nitro": "latest",
     "typescript": "latest"
+  },
+  "dependencies": {
+    "axios": "^1.18.1"
   }
 }
