@@ -13,5 +13,13 @@
     "@types/node": "latest",
     "nitro": "latest",
     "typescript": "latest"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.4",
+    "axios": "^1.18.1",
+    "crypto": "^1.0.1",
+    "jiti": "^2.7.0",
+    "jose": "^6.2.4",
+    "uuid": "^14.0.1"
   }
 }
