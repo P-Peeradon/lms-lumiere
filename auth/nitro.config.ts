@@ -5,6 +5,10 @@ export default defineConfig({
     experimental: {
         database: true
     },
+    runtimeConfig: {
+        hmacSecret: process.env.HMAC_SECRET ?? "",
+        jweSecret: process.env.JWE_SECRET ?? ""
+    },
     database: {
         default: {
             connector: "pglite",
