@@ -17,6 +17,8 @@
     "typescript": "latest"
   },
   "dependencies": {
+    "@azure/identity": "^4.13.1",
+    "@azure/keyvault-keys": "^4.10.2",
     "@electric-sql/pglite": "^0.5.4",
     "axios": "^1.18.1",
     "crypto": "^1.0.1",
