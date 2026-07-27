@@ -1,11 +1,12 @@
 import bcrypt from "bcryptjs";
 import { createDecipheriv, createHmac, Sign } from 'crypto';
-import type { JWEPayload, University } from "./interface";
+import type { JWEPayload, Role, SessionObject, ShadowID, University } from "./interface";
 import { CompactEncrypt, importJWK, jwtVerify, SignJWT } from "jose";
 import { DefaultAzureCredential } from "@azure/identity";
 import { CryptographyClient, KeyClient } from "@azure/keyvault-keys";
 import { useRuntimeConfig } from "nitro/runtime-config";
 import { globalPublicJwk, targetKeyId } from "#server/plugins/az-kvault-init.ts";
+import { v4 as uuidv4 } from 'uuid';
 
 export class ValueError extends Error {
     constructor(message: string, options?: ErrorOptions) {
@@ -23,6 +24,13 @@ class AuthHelper {
     private static config = useRuntimeConfig();
     private static vaultUrl = this.config.azVaultURL;
     private static credential = new DefaultAzureCredential();
+    private static readonly sessionTime: Record<Role, number> = {
+        "student": 8 * 3600,
+        "instructor": 4 * 3600,
+        "faculty_admin": 4 * 3600,
+        "central_admin": 3 * 3600,
+        "system_admin": 3 * 3600
+    }
 
     // 1. Initialize our Azure Structural Key Client
     private static keyClient = new KeyClient(this.vaultUrl, this.credential);
@@ -148,8 +156,23 @@ class AuthHelper {
         }
     }
 
-    static async generateSession() {
+    static async generateSession(hashedIP: string, hashedToken: string, shadowId: ShadowID, role: Role, tenant: University, device?: string): Promise<SessionObject> {
+        const sessionId = uuidv4();
+        
+        const issuedAt: EpochTimeStamp = new Date().getTime() * 1000;
+        const expiredAt: EpochTimeStamp = issuedAt + this.sessionTime[role];
 
+        const session: SessionObject = {
+            sessionId,
+            tenant,
+            shadowId,
+            hashedToken,
+            ipAddress: hashedIP,
+            iat: issuedAt,
+            exp: expiredAt
+        };
+
+        return session;
     }
 }
 

@@ -87,10 +87,12 @@ export default defineHandler(async (event: H3Event) => {
         });
     }
     
-    const clientIP: string | undefined = getRequestIP(event);
+    const clientIP: string | undefined = getRequestIP(event) ?? "";
     const device: string | null = event.req.headers.get('user-agent');
     const sessionID: UUIDTypes = uuidv4();
     const issue: EpochTimeStamp = new Date().getTime();
+
+    const hashedIP = await AuthHelper.hashTokenAndIP(clientIP, tokenIPSecret);
 
     const tokenPayload: JWEPayload = {
         shadow_id: ShadowID.parseShadowID(shadow_id as string),
@@ -106,18 +108,12 @@ export default defineHandler(async (event: H3Event) => {
     // Issue token
     const signedJWT = await AuthHelper.signToken(tokenPayload, tenant, jweSecret);
     const jweToken = await AuthHelper.encryptToken(signedJWT);
+    const hashedToken = await AuthHelper.hashTokenAndIP(jweToken, tokenIPSecret)
 
     // Record session in Redis
-    const newSession: SessionObject = {
-        sessionId: sessionID,
-        hashedToken: await AuthHelper.hashTokenAndIP(jweToken, tokenIPSecret),
-        shadowId: ShadowID.parseShadowID("P1502502Y"),
-        iat: issue,
-        exp: issue + (8 * 3600),
-        tenant: tenant,
-        hashedIP: await AuthHelper.hashTokenAndIP(clientIP ?? "127.0.0.1", tokenIPSecret),
-        userAgent: device ?? ""
-    }
+    const newSession: SessionObject = await AuthHelper.generateSession(
+        hashedIP, hashedToken, shadow_id, user_role, tenant
+    );
 
     return new HTTPResponse("Login Success", {
         status: 200,
