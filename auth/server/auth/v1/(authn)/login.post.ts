@@ -1,30 +1,44 @@
 import { defineHandler, HTTPResponse, type H3Event } from 'nitro';
 import { getRequestIP, HTTPError, readBody } from 'nitro/h3';
-import * as jose from 'jose';
-import { Role, ShadowID, type JWEPayload, type SessionObject } from '#helper/interface.ts';
+import { Role, ShadowID, University, type JWEPayload, type SessionObject } from '#helper/interface.ts';
 import { v4 as uuidv4, type UUIDTypes } from 'uuid';
-import jweTokenHelper from '#helper/jweToken.ts';
-import { createHmac } from 'crypto';
+import AuthHelper from '#helper/AuthHelper.ts';
 import { useDatabase } from 'nitro/database';
 import passwordHelper from '#helper/credential.ts';
+import { useRuntimeConfig } from 'nitro/runtime-config';
+import bcrypt from 'bcryptjs';
+import { timingSafeEqual } from 'crypto';
 
 const WHITELIST_TENANT = new Set(["university_of_melbourne", "university_of_sydney"]);
 
+interface UserPacket {
+    shadow_id: ShadowID, 
+    hashed_username: string, 
+    hashed_password: string, 
+    user_role: Role
+}
+
+interface LoginPayload { 
+    username: string, 
+    password: string, 
+    tenant: University 
+}
+
 export default defineHandler(async (event: H3Event) => {
     const db = useDatabase();
+    const config = useRuntimeConfig();
+    const { jweSecret, hmacSecret } = config;
     const body = await readBody(event);
-    let payload;
+    const contentType = event.req.headers.get("Content-Type") ?? "";
 
-    try {
-        payload = JSON.parse(body as any);
-    } catch {
-        throw new HTTPError("Error in parsing JSON request", {
-            status: 500,
-            statusText: "Internal Server Error"
-        });
+    if (typeof body !== "object" || contentType.toLowerCase() !== "application/json" ) {
+        throw new HTTPError("Format of data payload is not valid: JSON only.", {
+            status: 422,
+            statusText: "Unprocessable Content"
+        })
     }
 
-    const { username, password, tenant } = payload;
+    const { username, password, tenant } = body as LoginPayload;
 
     if (!username || !password || !tenant) {
         throw new HTTPError("Please include username, password and tenant for login", {
@@ -38,32 +52,36 @@ export default defineHandler(async (event: H3Event) => {
         });
     }
 
-    let credential;
+    let row: UserPacket | undefined;
 
     // compare password and username
     try {
-        credential = await db.sql`
-            SELECT shadow_id, hashed_username, hashed_password, user_role
+        const statement = db.prepare(`SELECT shadow_id, hashed_username, hashed_password, user_role
             FROM credentials
-            WHERE hashed_username = encode(hmac(${username}, '', 'sha256'), 'base64')
-        ;`;
+            WHERE hashed_username = encode(hmac(?, '', 'sha256'), 'base64');`)
+
+        row = (await statement.get(username)) as UserPacket;
     } catch {
-        throw new HTTPError("Error querying data");
+        throw new HTTPError("Error querying data", {
+            status: 500,
+            statusText: "Internal Server Error"
+        });
     }
 
     // { shadow_id, hashed_username, hashed_password, user_role }
-    const { rows } = credential;
-    if (!rows) {
+    if (!row) {
         throw new HTTPError("User not found", {
             status: 404,
             statusText: "Not Found"
         });
     }
 
-    const { shadow_id, hashed_username, hashed_password, user_role } = rows[0];
+    const { shadow_id, hashed_username, hashed_password, user_role } = row;
+    const bufferUsername = Buffer.from(await AuthHelper.hashUsername(username, hmacSecret), "base64");
+    const bufferUsernameCredential = Buffer.from(hashed_username, "base64")
 
-    if (!passwordHelper.compareHash(hashed_username as string, passwordHelper.hashCredential(username, "")) ||
-        !passwordHelper.verifyPassword(password, hashed_password as string)) {
+    if (!timingSafeEqual(bufferUsernameCredential, bufferUsername) ||
+        !bcrypt.compareSync(password, hashed_password)) {
         throw new HTTPError("User not found", {
             status: 403,
             statusText: "Forbidden"
@@ -87,12 +105,13 @@ export default defineHandler(async (event: H3Event) => {
     };
 
     // Issue token
-    const jwe = await jweTokenHelper.generateJWEToken(tokenPayload, "");
+    const signedJWT = await AuthHelper.signToken(tokenPayload, tenant, jweSecret);
+    const jweToken = await AuthHelper.encryptToken(signedJWT);
 
-        // Record session in Redis
+    // Record session in Redis
     const newSession: SessionObject = {
         sessionId: sessionID,
-        hashedToken: passwordHelper.hashCredential(jwe, ""),
+        hashedToken: passwordHelper.hashCredential(jweToken, ""),
         shadowId: ShadowID.parseShadowID("P1502502Y"),
         iat: issue,
         exp: issue + (8 * 3600),
