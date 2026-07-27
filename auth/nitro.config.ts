@@ -8,6 +8,7 @@ export default defineConfig({
     runtimeConfig: {
         hmacSecret: process.env.HMAC_SECRET ?? "",
         jweSecret: process.env.JWE_SECRET ?? "",
+        tokenIPSecret: process.env.TOKEN_IP_SECRET ?? "",
         azVaultURL: process.env.AZURE_VAULT_URL ?? "",
         authKeyPairName: process.env.AUTH_KEYPAIR_NAME ?? ""
     },
