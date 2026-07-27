@@ -170,30 +170,19 @@ class AuthHelper {
         }
     }
 
-    static async generateSession(hashedIP: string, hashedToken: string, shadowId: ShadowID, role: Role, tenant: University, device?: string): Promise<SessionObject> {
+    static async generateSession(
+        hashedIP: string, 
+        hashedToken: string, 
+        shadowId: ShadowID, 
+        role: Role, 
+        tenant: University,
+        isRefresh: boolean = false, 
+        device?: string): Promise<SessionObject> {
         const sessionId = uuidv4();
+        const lifespan: number = isRefresh ? this.sessionTime[role] : 7 * 24 * 3600;
         
         const issuedAt: EpochTimeStamp = new Date().getTime() * 1000;
-        const expiredAt: EpochTimeStamp = issuedAt + this.sessionTime[role];
-
-        const session: SessionObject = {
-            sessionId,
-            tenant,
-            shadowId,
-            hashedToken,
-            ipAddress: hashedIP,
-            iat: issuedAt,
-            exp: expiredAt
-        };
-
-        return session;
-    }
-
-    static async refreshSession(hashedIP: string, hashedToken: string, shadowId: ShadowID, tenant: University, device?: string): Promise<SessionObject> {
-        const sessionId = uuidv4();
-        
-        const issuedAt: EpochTimeStamp = new Date().getTime() * 1000;
-        const expiredAt: EpochTimeStamp = issuedAt + 7 * 24 * 3600;
+        const expiredAt: EpochTimeStamp = issuedAt + lifespan;
 
         const session: SessionObject = {
             sessionId,
