@@ -1,3 +1,4 @@
+import type { JWTPayload } from 'jose';
 import type { Session, SessionData } from 'nitro/h3';
 import { type UUIDTypes } from 'uuid';
 
@@ -101,7 +102,7 @@ export interface PII {
 }
 */
 
-export interface JWEPayload {
+export interface JWEPayload extends JWTPayload {
     shadow_id: ShadowID;
     role: Role;
     token_scope: string[];

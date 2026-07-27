@@ -7,7 +7,8 @@ export default defineConfig({
     },
     runtimeConfig: {
         hmacSecret: process.env.HMAC_SECRET ?? "",
-        jweSecret: process.env.JWE_SECRET ?? ""
+        jweSecret: process.env.JWE_SECRET ?? "",
+        runtimeConfig: process.env.AZURE_VAULT_URL ?? ""
     },
     database: {
         default: {
