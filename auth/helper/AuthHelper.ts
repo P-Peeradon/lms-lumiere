@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { createDecipheriv, createHmac, Sign } from 'crypto';
 import type { JWEPayload, University } from "./interface";
-import { CompactEncrypt, EncryptJWT, importJWK, jwtVerify, SignJWT, type JWK } from "jose";
+import { CompactEncrypt, importJWK, jwtVerify, SignJWT } from "jose";
 import { DefaultAzureCredential } from "@azure/identity";
 import { CryptographyClient, KeyClient } from "@azure/keyvault-keys";
 import { useRuntimeConfig } from "nitro/runtime-config";
