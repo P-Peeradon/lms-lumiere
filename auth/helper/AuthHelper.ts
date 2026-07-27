@@ -68,7 +68,7 @@ class AuthHelper {
             .setProtectedHeader({ alg: 'hs256' })
             .setIssuer(tenant)
             .setAudience(tenant)
-            .setExpirationTime('4h')
+            .setIssuedAt()
             .sign(secret);
 
         return token;
@@ -94,6 +94,20 @@ class AuthHelper {
             .encrypt(rsaPublicKey);
 
         return encryptedJwe;
+    }
+
+    static async refreshToken(payload: JWEPayload, tenant: University, jweSecret: string) {
+        const secret = new TextEncoder().encode(jweSecret);
+
+        const token: string = await new SignJWT(payload)
+            .setProtectedHeader({ alg: 'hs256' })
+            .setIssuer(tenant)
+            .setAudience(tenant)
+            .setIssuedAt()
+            .setExpirationTime('7d')
+            .sign(secret);
+
+        return token;
     }
 
     static async decryptToken(jweToken: string, jweSecret: string): Promise<JWEPayload> {
@@ -161,6 +175,25 @@ class AuthHelper {
         
         const issuedAt: EpochTimeStamp = new Date().getTime() * 1000;
         const expiredAt: EpochTimeStamp = issuedAt + this.sessionTime[role];
+
+        const session: SessionObject = {
+            sessionId,
+            tenant,
+            shadowId,
+            hashedToken,
+            ipAddress: hashedIP,
+            iat: issuedAt,
+            exp: expiredAt
+        };
+
+        return session;
+    }
+
+    static async refreshSession(hashedIP: string, hashedToken: string, shadowId: ShadowID, tenant: University, device?: string): Promise<SessionObject> {
+        const sessionId = uuidv4();
+        
+        const issuedAt: EpochTimeStamp = new Date().getTime() * 1000;
+        const expiredAt: EpochTimeStamp = issuedAt + 7 * 24 * 3600;
 
         const session: SessionObject = {
             sessionId,
