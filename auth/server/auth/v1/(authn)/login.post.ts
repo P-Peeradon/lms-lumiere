@@ -4,7 +4,6 @@ import { Role, ShadowID, University, type JWEPayload, type SessionObject } from 
 import { v4 as uuidv4, type UUIDTypes } from 'uuid';
 import AuthHelper from '#helper/AuthHelper.ts';
 import { useDatabase } from 'nitro/database';
-import passwordHelper from '#helper/credential.ts';
 import { useRuntimeConfig } from 'nitro/runtime-config';
 import bcrypt from 'bcryptjs';
 import { timingSafeEqual } from 'crypto';
@@ -27,7 +26,7 @@ interface LoginPayload {
 export default defineHandler(async (event: H3Event) => {
     const db = useDatabase();
     const config = useRuntimeConfig();
-    const { jweSecret, hmacSecret } = config;
+    const { jweSecret, hmacSecret, tokenIPSecret } = config;
     const body = await readBody(event);
     const contentType = event.req.headers.get("Content-Type") ?? "";
 
@@ -111,12 +110,12 @@ export default defineHandler(async (event: H3Event) => {
     // Record session in Redis
     const newSession: SessionObject = {
         sessionId: sessionID,
-        hashedToken: passwordHelper.hashCredential(jweToken, ""),
+        hashedToken: await AuthHelper.hashTokenAndIP(jweToken, tokenIPSecret),
         shadowId: ShadowID.parseShadowID("P1502502Y"),
         iat: issue,
         exp: issue + (8 * 3600),
         tenant: tenant,
-        hashedIP: passwordHelper.hashCredential(clientIP ?? "", ""),
+        hashedIP: await AuthHelper.hashTokenAndIP(clientIP ?? "127.0.0.1", tokenIPSecret),
         userAgent: device ?? ""
     }
 

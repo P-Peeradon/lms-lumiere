@@ -47,6 +47,12 @@ class AuthHelper {
         return hashedUsername;
     }
 
+    static async hashTokenAndIP(rawToken: string, secret: string): Promise<string> {
+        const hashedToken: string = await createHmac("sha3-384", secret).update(rawToken).digest('base64');
+
+        return hashedToken;
+    }
+
     static async signToken(payload: JWEPayload, tenant: University, jweSecret: string): Promise<string> {
         const secret = new TextEncoder().encode(jweSecret);
 
@@ -140,6 +146,10 @@ class AuthHelper {
         } catch (error: any) {
             throw new CryptoError(`Token decryption and validation failed: ${error.message}`)
         }
+    }
+
+    static async generateSession() {
+
     }
 }
 
