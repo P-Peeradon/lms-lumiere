@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "d:\\lms-lumiere\\the-identity\\the-identity.csproj": {}
+    "D:\\lms-lumiere\\the-identity\\the-identity.csproj": {}
   },
   "projects": {
-    "d:\\lms-lumiere\\the-identity\\the-identity.csproj": {
+    "D:\\lms-lumiere\\the-identity\\the-identity.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\lms-lumiere\\the-identity\\the-identity.csproj",
+        "projectUniqueName": "D:\\lms-lumiere\\the-identity\\the-identity.csproj",
         "projectName": "the-identity",
-        "projectPath": "d:\\lms-lumiere\\the-identity\\the-identity.csproj",
+        "projectPath": "D:\\lms-lumiere\\the-identity\\the-identity.csproj",
         "packagesPath": "C:\\Users\\Asus\\.nuget\\packages\\",
-        "outputPath": "d:\\lms-lumiere\\the-identity\\obj\\",
+        "outputPath": "D:\\lms-lumiere\\the-identity\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
