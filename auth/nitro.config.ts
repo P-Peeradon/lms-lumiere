@@ -8,7 +8,8 @@ export default defineConfig({
     runtimeConfig: {
         hmacSecret: process.env.HMAC_SECRET ?? "",
         jweSecret: process.env.JWE_SECRET ?? "",
-        runtimeConfig: process.env.AZURE_VAULT_URL ?? ""
+        azVaultURL: process.env.AZURE_VAULT_URL ?? "",
+        authKeyPairName: process.env.AUTH_KEYPAIR_NAME ?? ""
     },
     database: {
         default: {
@@ -19,5 +20,5 @@ export default defineConfig({
             }
         }
     },
-    plugins: ['./server/plugins/db-init.ts']
+    plugins: ['./server/plugins/db-init.ts', './server/plugins/az-kvault-init.ts']
 });
