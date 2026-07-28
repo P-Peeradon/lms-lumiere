@@ -96,13 +96,27 @@ class AuthHelper {
         return encryptedJwe;
     }
 
-    static async refreshToken(payload: JWEPayload, tenant: University, jweSecret: string) {
+    static async refreshToken(payload: JWEPayload, tenant: University, jweSecret: string): Promise<string> {
         const secret = new TextEncoder().encode(jweSecret);
+        const now = new Date().getTime();
+        const expiry = now + 7 * 24 * 3600 * 1000;
 
-        const token: string = await new SignJWT(payload)
+        const { aud, device_metadata, ipAddress, ip, ...payloadWithoutSensitive } = payload as JWEPayload & {
+            aud?: string | string[];
+            ipAddress?: string;
+            ip?: string;
+        };
+
+        const refreshPayload = {
+            ...payloadWithoutSensitive,
+            device_metadata: null,
+            issued_at: now,
+            expiry,
+        } as JWEPayload;
+
+        const token: string = await new SignJWT(refreshPayload)
             .setProtectedHeader({ alg: 'hs256' })
-            .setIssuer(tenant)
-            .setAudience(tenant)
+            .setIssuer(tenant ?? payload.tenant)
             .setIssuedAt()
             .setExpirationTime('7d')
             .sign(secret);
@@ -179,7 +193,7 @@ class AuthHelper {
         isRefresh: boolean = false, 
         device?: string): Promise<SessionObject> {
         const sessionId = uuidv4();
-        const lifespan: number = isRefresh ? this.sessionTime[role] : 7 * 24 * 3600;
+        const lifespan: number = isRefresh ? 7 * 24 * 3600 : this.sessionTime[role];
         
         const issuedAt: EpochTimeStamp = new Date().getTime() * 1000;
         const expiredAt: EpochTimeStamp = issuedAt + lifespan;
