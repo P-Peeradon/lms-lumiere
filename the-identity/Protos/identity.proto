@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "google/protobuf/timestamp.proto";
 
 option csharp_namespace = "the_identity";
 
@@ -7,15 +8,77 @@ package identity;
 // The greeting service definition.
 service IdentityService {
   // Sends a greeting
-  rpc SayHello (HelloRequest) returns (HelloReply);
+  rpc approvePII (approvePIIReq) returns (approvePIIRes);
+  rpc generateShadowID (generateShadowIDReq) returns (generateShadowIDRes);
+  rpc encryptedPII (encryptedPIIReq) returns (encryptedPIIRes);
+  rpc hashSearchKey (hashSearchKeyReq) returns (hashSearchKeyRes);
 }
 
-// The request message containing the user's name.
-message HelloRequest {
-  string name = 1;
+message approvePIIReq {
+  string tenant = 1;
+  string requestShadowID = 2;
+  string applicantName = 3;
+  string reason = 4;
 }
 
-// The response message containing the greetings.
-message HelloReply {
-  string message = 1;
+message approvePIIRes {
+  string tenant = 1;
+  string requestShadowID = 2;
+  google.protobuf.Timestamp timestamp = 3;
 }
+
+message generateShadowIDReq {
+  string tenant = 1;
+  string requestShadowID = 2;
+  bool isDomestic = 3;
+  bool isIntern = 4;
+  bool isResearch = 5;
+  int32 enrolYear = 6;
+}
+
+message generateShadowIDRes {
+  string tenant = 1;
+  string requestShadowID = 2;
+  string newShadowID = 3;
+}
+
+message encryptedPIIReq {
+  string tenant = 1;
+  string requesterShadowID = 2;
+  string firstname = 3; 
+  string DOB = 4; 
+  string phone = 5; 
+  string uniEmail = 6; 
+  string personalEmail =7; 
+  string address = 8; 
+  string uniID = 9;
+  string nationalID = 10;
+  string nationality = 11;
+  string passportID = 12;
+}
+
+message encryptedPIIRes {
+  string tenant = 1;
+  string requesterShadowID = 2;
+  bytes encryptedPIIBlob = 3;
+  string statusMessage = 4;
+}
+
+message hashSearchKeyReq {
+  string tenant = 1;
+  string requesterShadowID = 2; // Record who request?
+  string ownerShadowID = 3; // Who owns PII?
+  string name = 4;
+  string uniEmail = 5;
+  string DOB = 6;
+  string uniID = 7;
+}
+
+message hashSearchKeyRes {
+  string tenant = 1;
+  bytes hashedName = 2;
+  bytes hashedUniEmail = 3;
+  bytes hashedDOB = 4;
+  bytes hashedUniID = 5;
+}
+
