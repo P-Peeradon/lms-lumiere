@@ -19,14 +19,14 @@ service IdentityService {
 
 message ApprovePIIReq {
   string tenant = 1;
-  string requestShadowID = 2;
+  string requesterShadowID = 2;
   string applicantName = 3;
   string reason = 4;
 }
 
 message ApprovePIIRes {
   string tenant = 1;
-  string requestShadowID = 2;
+  string requesterShadowID = 2;
   google.protobuf.Timestamp timestamp = 3;
 }
 

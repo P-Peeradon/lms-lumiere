@@ -15,24 +15,26 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         _logger = logger;
     }
 
-    public override Task<ApprovePIIRes> approvePII(ApprovePIIReq request, ServerCallContext context)
+    public override Task<ApprovePIIRes> ApprovePII(ApprovePIIReq request, ServerCallContext context)
     {
         _logger.LogInformation("approvePII request received for tenant {Tenant}", request.Tenant);
 
         // Placeholder structural validation, checksum checks, contextual validation,
         // cross-document consistency, and risk scoring should happen here.
         // Raw PII is intentionally not logged.
-        if (string.IsNullOrWhiteSpace(request.Tenant) || string.IsNullOrWhiteSpace(request.RequestShadowID))
+        if (string.IsNullOrWhiteSpace(request.Tenant) || string.IsNullOrWhiteSpace(request.RequesterShadowID))
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request metadata."));
         }
 
-        return Task.FromResult(new ApprovePIIRes
+        var response = new ApprovePIIRes
         {
             Tenant = request.Tenant,
-            RequestShadowID = request.RequestShadowID,
+            RequesterShadowID = request.requesterShadowID,
             Timestamp = Timestamp.FromDateTime(DateTime.UtcNow)
-        });
+        };
+
+        return Task.FromResult(response);
     }
 
     public override Task<GenerateShadowIDRes> generateShadowID(GenerateShadowIDReq request, ServerCallContext context)
@@ -258,4 +260,12 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
 
         return result;
     }
+}
+
+public class ApprovePIIReq
+{
+}
+
+public class ApprovePIIRes
+{
 }
