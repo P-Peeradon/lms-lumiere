@@ -9,13 +9,15 @@ namespace the_identity.Services;
 public class IdentityService : the_identity.IdentityService.IdentityServiceBase
 {
     private readonly ILogger<IdentityService> _logger;
+    private static readonly (byte[] PublicKey, byte[] PrivateKey) _placeholderEccKeyPair =
+        IdentityHelper.GenerateEccKeyPair();
 
     public IdentityService(ILogger<IdentityService> logger)
     {
         _logger = logger;
     }
 
-    public override Task<ApprovePIIRes> ApprovePII(ApprovePIIReq request, ServerCallContext context)
+    public override Task<approvePIIRes> approvePII(approvePIIReq request, ServerCallContext context)
     {
         _logger.LogInformation("approvePII request received for tenant {Tenant}", request.Tenant);
 
@@ -27,39 +29,39 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid request metadata."));
         }
 
-        var response = new ApprovePIIRes
+        var response = new approvePIIRes
         {
             Tenant = request.Tenant,
-            RequesterShadowID = request.requesterShadowID,
+            RequesterShadowID = request.RequesterShadowID,
             Timestamp = Timestamp.FromDateTime(DateTime.UtcNow)
         };
 
         return Task.FromResult(response);
     }
 
-    public override Task<GenerateShadowIDRes> generateShadowID(GenerateShadowIDReq request, ServerCallContext context)
+    public override Task<generateShadowIDRes> generateShadowID(generateShadowIDReq request, ServerCallContext context)
     {
         _logger.LogInformation("generateShadowID request received for tenant {Tenant}", request.Tenant);
 
         string studentType = "";
         string studyMode = "";
 
-        if (request.isIntern) {
+        if (request.IsIntern) {
             studentType = "intern";
-        } else if (request.isResearch) {
+        } else if (request.IsResearch) {
             studentType = "research";
             studyMode = "fulltime";
-        } else if (request.isExchange) {
+        } else if (request.IsExchange) {
             studentType = "exchange";
-        } else if (!request.isDomestic) {
+        } else if (!request.IsDomestic) {
             studentType = "international";
             studyMode = "fulltime";
         } else {
             studentType = "domestic";
-            studyMode = request.isFulltime ? "fulltime" : "parttime";
+            studyMode = request.IsFulltime ? "fulltime" : "parttime";
         }
 
-        var newShadowId = IdentityHelper.GenerateShadowID(request.enrolYear, studentType, studyMode);
+        var newShadowId = IdentityHelper.generateShadowId(request.EnrolYear, studentType, studyMode);
 
         return Task.FromResult(new generateShadowIDRes
         {
@@ -69,7 +71,7 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         });
     }
 
-    public override Task<EncryptedPIIRes> EncryptedPII(EncryptedPIIReq request, ServerCallContext context)
+    public override Task<encryptedPIIRes> encryptedPII(encryptedPIIReq request, ServerCallContext context)
     {
         _logger.LogInformation("encryptPII request received for tenant {Tenant}", request.Tenant);
 
@@ -79,10 +81,10 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         }
 
         var rawPiiPayload = BuildPiiPayload(request);
-        var encryptResult = IdentityHelper.encryptData(Encoding.UTF8.GetBytes(rawPiiPayload), GetPlaceholderEccPublicKey());
+        var encryptResult = IdentityHelper.encryptData(Encoding.UTF8.GetBytes(rawPiiPayload), getPlaceholderEccPublicKey());
         var responseBlob = ByteString.CopyFrom(Combine(encryptResult.Iv, encryptResult.Tag, encryptResult.EncryptedPayload, encryptResult.EncryptedDataKey));
 
-        return Task.FromResult(new EncryptedPIIRes
+        return Task.FromResult(new encryptedPIIRes
         {
             Tenant = request.Tenant,
             RequesterShadowID = request.RequesterShadowID,
@@ -91,13 +93,13 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         });
     }
 
-    public override Task<DecryptPIIRes> DecryptPII(DecryptPIIReq request, ServerCallContext context)
+    public override Task<decryptPIIRes> decryptPII(decryptPIIReq request, ServerCallContext context)
     {
         _logger.LogInformation("decryptPII request received for tenant {Tenant} by position {Position}", request.Tenant, request.RequesterPosition);
 
         if (!IsDecryptRequestAuthorized(request.RequesterPosition, request.RequesterShadowID, request.OwnerShadowID))
         {
-            return Task.FromResult(new DecryptPIIRes
+            return Task.FromResult(new decryptPIIRes
             {
                 Tenant = request.Tenant,
                 IsAuthorised = false,
@@ -107,7 +109,7 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         }
 
         // Placeholder: decrypting would require private key material from vault and AES key unwrap.
-        return Task.FromResult(new DecryptPIIRes
+        return Task.FromResult(new decryptPIIRes
         {
             Tenant = request.Tenant,
             IsAuthorised = true,
@@ -116,27 +118,29 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         });
     }
 
-    public override Task<HashSearchKeyRes> HashSearchKey(HashSearchKeyReq request, ServerCallContext context)
+    public override Task<hashSearchKeyRes> hashSearchKey(hashSearchKeyReq request, ServerCallContext context)
     {
         _logger.LogInformation("hashSearchKey request received for tenant {Tenant}", request.Tenant);
 
-        return Task.FromResult(new HashSearchKeyRes
+        return Task.FromResult(new hashSearchKeyRes
         {
             Tenant = request.Tenant,
             HashedName = ByteString.CopyFrom(IdentityHelper.generateHMAC(request.Name)),
             HashedUniEmail = ByteString.CopyFrom(IdentityHelper.generateHMAC(request.UniEmail)),
-            HashedDOB = ByteString.CopyFrom(IdentityHelper.generateHMAC(request.Dob)),
-            HashedUniID = ByteString.CopyFrom(IdentityHelper.generateHMAC(request.UniId))
+            HashedDOB = ByteString.CopyFrom(IdentityHelper.generateHMAC(request.DOB)),
+            HashedUniID = ByteString.CopyFrom(IdentityHelper.generateHMAC(request.UniID))
         });
     }
 
-    public override Task<RevokePIIRes> RevokePII(RevokePIIReq request, ServerCallContext context)
+    public override Task<revokePIIRes> revokePII(revokePIIReq request, ServerCallContext context)
     {
         _logger.LogInformation("revokePII request received for tenant {Tenant}", request.Tenant);
 
+        revokePIIRes response;
+
         if (string.IsNullOrWhiteSpace(request.OwnerShadowID))
         {
-            return Task.FromResult(new RevokePIIRes
+            response = new revokePIIRes
             {
                 Tenant = request.Tenant,
                 Timestamp = Timestamp.FromDateTime(DateTime.UtcNow),
@@ -144,12 +148,13 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
                 IsAuthority = false,
                 ResponseMessage = "Missing owner identifier.",
                 IsIllegal = false
-            });
+            };
+
+            return Task.FromResult(response);
         }
 
         _logger.LogInformation("revocation event emitted for ownerShadowID {OwnerShadowID}", request.OwnerShadowID);
-
-        return Task.FromResult(new RevokePIIRes
+        response = new revokePIIRes
         {
             Tenant = request.Tenant,
             Timestamp = Timestamp.FromDateTime(DateTime.UtcNow),
@@ -157,16 +162,18 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
             IsAuthority = true,
             ResponseMessage = "Revocation recorded and encrypted PII deletion requested.",
             IsIllegal = false
-        });
+        };
+
+        return Task.FromResult(response);
     }
 
-    public override Task<ValidateIdentityRes> ValidateIdentity(ValidateIdentityReq request, ServerCallContext context)
+    public override Task<validateIdentityRes> validateIdentity(validateIdentityReq request, ServerCallContext context)
     {
         _logger.LogInformation("validateIdentity request received for tenant {Tenant}", request.Tenant);
 
-        if (request.HashedUniId.IsEmpty || request.HashedName.IsEmpty)
+        if (request.HashedUniID.IsEmpty || request.HashedName.IsEmpty)
         {
-            return Task.FromResult(new ValidateIdentityRes
+            return Task.FromResult(new validateIdentityRes
             {
                 Tenant = request.Tenant,
                 RequesterShadowID = request.RequesterShadowID,
@@ -179,7 +186,7 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         // Placeholder verification: compare hashed query values to stored values from DB API.
         var verified = VerifyHashedIdentity(request);
 
-        return Task.FromResult(new ValidateIdentityRes
+        return Task.FromResult(new validateIdentityRes
         {
             Tenant = request.Tenant,
             RequesterShadowID = request.RequesterShadowID,
@@ -217,27 +224,27 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         return true;
     }
 
-    private static bool VerifyHashedIdentity(ValidateIdentityReq request)
+    private static bool VerifyHashedIdentity(validateIdentityReq request)
     {
         // Placeholder deterministic comparison. A real implementation queries a secure DB API and compares stored HMACs.
-        return !request.HashedName.IsEmpty && !request.HashedUniId.IsEmpty;
+        return !request.HashedName.IsEmpty && !request.HashedUniID.IsEmpty;
     }
 
-    private static string BuildPiiPayload(EncryptedPIIReq request)
+    private static string BuildPiiPayload(encryptedPIIReq request)
     {
         return new StringBuilder()
             .Append('{')
             .Append("\"firstname\":\"").Append(EscapeForJson(request.Firstname)).Append("\",")
             .Append("\"lastname\":\"").Append(EscapeForJson(request.Lastname)).Append("\",")
-            .Append("\"DOB\":\"").Append(EscapeForJson(request.Dob)).Append("\",")
+            .Append("\"DOB\":\"").Append(EscapeForJson(request.DOB)).Append("\",")
             .Append("\"phone\":\"").Append(EscapeForJson(request.Phone)).Append("\",")
             .Append("\"uniEmail\":\"").Append(EscapeForJson(request.UniEmail)).Append("\",")
             .Append("\"personalEmail\":\"").Append(EscapeForJson(request.PersonalEmail)).Append("\",")
             .Append("\"address\":\"").Append(EscapeForJson(request.Address)).Append("\",")
-            .Append("\"uniID\":\"").Append(EscapeForJson(request.UniId)).Append("\",")
-            .Append("\"nationalID\":\"").Append(EscapeForJson(request.NationalId)).Append("\",")
+            .Append("\"uniID\":\"").Append(EscapeForJson(request.UniID)).Append("\",")
+            .Append("\"nationalID\":\"").Append(EscapeForJson(request.NationalID)).Append("\",")
             .Append("\"nationality\":\"").Append(EscapeForJson(request.Nationality)).Append("\",")
-            .Append("\"passportID\":\"").Append(EscapeForJson(request.PassportId)).Append("\"")
+            .Append("\"passportID\":\"").Append(EscapeForJson(request.PassportID)).Append("\"")
             .Append('}')
             .ToString();
     }
@@ -245,6 +252,13 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
     private static string EscapeForJson(string value)
     {
         return value?.Replace("\\", "\\\\").Replace("\"", "\\\"") ?? string.Empty;
+    }
+
+    private static byte[] getPlaceholderEccPublicKey()
+    {
+        // In a real implementation, store the private key safely in a secure vault
+        // and distribute only the public key to encryptors.
+        return _placeholderEccKeyPair.PublicKey;
     }
 
     private static byte[] Combine(params byte[][] values)
@@ -260,12 +274,4 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
 
         return result;
     }
-}
-
-public class ApprovePIIReq
-{
-}
-
-public class ApprovePIIRes
-{
 }

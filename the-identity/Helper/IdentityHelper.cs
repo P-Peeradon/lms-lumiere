@@ -29,7 +29,7 @@ public static class IdentityHelper
 
         var tag = new byte[16];
         var ciphertext = new byte[rawPii.Length];
-        using (var aesGcm = new AesGcm(aesKey))
+        using (var aesGcm = new AesGcm(aesKey, 16))
         {
             aesGcm.Encrypt(iv, rawPii, ciphertext, tag, null);
         }
@@ -45,12 +45,18 @@ public static class IdentityHelper
         var aesKey = UnwrapAesKeyWithVault(encryptedAesKey);
 
         var plaintext = new byte[encryptedPayload.Length];
-        using (var aesGcm = new AesGcm(aesKey))
+        using (var aesGcm = new AesGcm(aesKey, 16))
         {
             aesGcm.Decrypt(iv, encryptedPayload, tag, plaintext, null);
         }
 
         return plaintext;
+    }
+
+    public static (byte[] PublicKey, byte[] PrivateKey) GenerateEccKeyPair()
+    {
+        using var ecdh = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
+        return (ecdh.ExportSubjectPublicKeyInfo(), ecdh.ExportECPrivateKey());
     }
 
     public static byte[] generateHMAC(string fieldValue)
@@ -138,7 +144,7 @@ public static class IdentityHelper
         return number.ToString("D7");
     }
 
-    public static string GenerateShadowId(
+    public static string generateShadowId(
         int yearOfEnrollment,
         string studentType,   // domestic, international, exchange, intern, research
         string studyMode      // fulltime, parttime
