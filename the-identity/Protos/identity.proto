@@ -8,8 +8,8 @@ package identity;
 // The greeting service definition.
 service IdentityService {
   // Sends a greeting
-  rpc approvePII (approvePIIReq) returns (approvePIIRes);
-  rpc generateShadowID (generateShadowIDReq) returns (generateShadowIDRes);
+  rpc approvePII (ApprovePIIReq) returns (ApprovePIIRes);
+  rpc generateShadowID (GenerateShadowIDReq) returns (GenerateShadowIDRes);
   rpc encryptedPII (encryptedPIIReq) returns (encryptedPIIRes);
   rpc decryptPII (decryptPIIReq) returns (decryptPIIRes);
   rpc hashSearchKey (hashSearchKeyReq) returns (hashSearchKeyRes);
@@ -17,20 +17,20 @@ service IdentityService {
   rpc validateIdentity (validateIdentityReq) returns (validateIdentityRes);
 }
 
-message approvePIIReq {
+message ApprovePIIReq {
   string tenant = 1;
   string requestShadowID = 2;
   string applicantName = 3;
   string reason = 4;
 }
 
-message approvePIIRes {
+message ApprovePIIRes {
   string tenant = 1;
   string requestShadowID = 2;
   google.protobuf.Timestamp timestamp = 3;
 }
 
-message generateShadowIDReq {
+message GenerateShadowIDReq {
   string tenant = 1;
   string requestShadowID = 2;
   bool isDomestic = 3;
@@ -40,7 +40,7 @@ message generateShadowIDReq {
   optional bool isFulltime = 7; // Domestic only
 }
 
-message generateShadowIDRes {
+message GenerateShadowIDRes {
   string tenant = 1;
   string requestShadowID = 2;
   string newShadowID = 3;

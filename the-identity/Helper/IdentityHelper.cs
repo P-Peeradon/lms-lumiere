@@ -133,6 +133,7 @@ public static class IdentityHelper
 
     private static string GenerateRandomDigits7()
     {
+        Random rng = new Random();
         int number = rng.Next(0, 10_000_000);
         return number.ToString("D7");
     }
@@ -150,7 +151,7 @@ public static class IdentityHelper
         return $"{prefix}{digits7}{checksum}";
     }
 
-    public static bool validateShadowID(string shadowId)
+    public static bool validateShadowID(string shadowId, bool before2023)
     {
         if (string.IsNullOrWhiteSpace(shadowId) || shadowId.Length != 9)
         {
@@ -158,8 +159,7 @@ public static class IdentityHelper
         }
 
         var prefix = shadowId[0];
-        var yearSegment = shadowId.Substring(1, 2);
-        var randomSegment = shadowId.Substring(3, 7);
+        var digitSegment = shadowId.Substring(1, 7);
         var checksum = shadowId[8];
 
         if (!new[] { 'R', 'X', 'P', 'E', 'S' }.Contains(prefix))
@@ -167,18 +167,17 @@ public static class IdentityHelper
             return false;
         }
 
-        if (!int.TryParse(yearSegment, out var yearDigits) || !randomSegment.All(char.IsDigit))
+        if (!digitSegment.All(char.IsDigit))
         {
             return false;
         }
 
-        var fullYear = 2000 + yearDigits;
-        if (prefix == 'E' && fullYear > 2023)
+        if (prefix == 'E' && !before2023)
         {
             return false;
         }
 
-        if (prefix == 'S' && fullYear <= 2023)
+        if (prefix == 'S' && before2023)
         {
             return false;
         }
@@ -191,7 +190,7 @@ public static class IdentityHelper
             _ => 0
         };
 
-        var expectedChecksum = CalculateChecksum(prefix, yearSegment, randomSegment, offset);
+        var expectedChecksum = ComputeChecksum(prefix, digitSegment);
         return checksum == expectedChecksum;
     }
 

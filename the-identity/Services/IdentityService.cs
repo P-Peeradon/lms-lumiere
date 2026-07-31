@@ -15,7 +15,7 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         _logger = logger;
     }
 
-    public override Task<ApprovePIIRes> ApprovePII(ApprovePIIReq request, ServerCallContext context)
+    public override Task<ApprovePIIRes> approvePII(ApprovePIIReq request, ServerCallContext context)
     {
         _logger.LogInformation("approvePII request received for tenant {Tenant}", request.Tenant);
 
@@ -35,7 +35,7 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         });
     }
 
-    public override Task<GenerateShadowIDRes> GenerateShadowID(GenerateShadowIDReq request, ServerCallContext context)
+    public override Task<GenerateShadowIDRes> generateShadowID(GenerateShadowIDReq request, ServerCallContext context)
     {
         _logger.LogInformation("generateShadowID request received for tenant {Tenant}", request.Tenant);
 
@@ -57,9 +57,9 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
             studyMode = request.isFulltime ? "fulltime" : "parttime";
         }
 
-        var newShadowId = IdentityHelper.generateShadowID(request.enrolYear, studentType, studyMode);
+        var newShadowId = IdentityHelper.GenerateShadowID(request.enrolYear, studentType, studyMode);
 
-        return Task.FromResult(new GenerateShadowIDRes
+        return Task.FromResult(new generateShadowIDRes
         {
             Tenant = request.Tenant,
             RequestShadowID = request.RequestShadowID,
