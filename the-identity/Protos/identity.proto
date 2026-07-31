@@ -11,7 +11,10 @@ service IdentityService {
   rpc approvePII (approvePIIReq) returns (approvePIIRes);
   rpc generateShadowID (generateShadowIDReq) returns (generateShadowIDRes);
   rpc encryptedPII (encryptedPIIReq) returns (encryptedPIIRes);
+  rpc decryptPII (decryptPIIReq) returns (decryptPIIRes);
   rpc hashSearchKey (hashSearchKeyReq) returns (hashSearchKeyRes);
+  rpc revokePII (revokePIIReq) returns (revokePIIRes);
+  rpc validateIdentity (validateIdentityReq) returns (validateIdentityRes);
 }
 
 message approvePIIReq {
@@ -44,17 +47,19 @@ message generateShadowIDRes {
 
 message encryptedPIIReq {
   string tenant = 1;
-  string requesterShadowID = 2;
-  string firstname = 3; 
-  string DOB = 4; 
-  string phone = 5; 
-  string uniEmail = 6; 
-  string personalEmail =7; 
-  string address = 8; 
-  string uniID = 9;
-  string nationalID = 10;
-  string nationality = 11;
-  string passportID = 12;
+  string requesterShadowID = 2; // Who request PII encryption?
+  string ownerShadowID = 3; // Who is the Genuine Owner?
+  string firstname = 4;
+  string lastname = 5; 
+  string DOB = 6; 
+  string phone = 7; 
+  string uniEmail = 8; 
+  string personalEmail = 9; 
+  string address = 10; 
+  string uniID = 11;
+  string nationalID = 12;
+  string nationality = 13;
+  string passportID = 14;
 }
 
 message encryptedPIIRes {
@@ -62,6 +67,21 @@ message encryptedPIIRes {
   string requesterShadowID = 2;
   bytes encryptedPIIBlob = 3;
   string statusMessage = 4;
+}
+
+message decryptPIIReq {
+  string tenant = 1;
+  string requesterShadowID = 2;
+  string requesterPosition = 3;
+  string ownerShadowID = 4;
+  string reason = 5;
+}
+
+message decryptPIIRes {
+  string tenant = 1;
+  bool isAuthorised = 2;
+  bool success = 3;
+  string errorMessage = 4;
 }
 
 message hashSearchKeyReq {
@@ -82,3 +102,39 @@ message hashSearchKeyRes {
   bytes hashedUniID = 5;
 }
 
+message revokePIIReq {
+  string tenant = 1;
+  string requestShadowID = 2;
+  string ownerShadowID = 3;
+  string requesterPosition = 4;
+  bytes evidences = 5;
+  string reason = 6;
+}
+
+message revokePIIRes {
+  string tenant = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  bool status = 3;
+  bool isAuthority = 4; // Refer to the requester has authority to revoke PII or not.
+  string responseMessage = 5;
+  bool isIllegal = 6; // The reason related to the owner illegal act or not, such as impersonate or forged government documents.
+}
+
+message validateIdentityReq {
+  string tenant = 1;
+  string requesterShadowID = 2; 
+  string requesterPosition = 3;
+  bytes hashedUniID = 4;
+  bytes hashedName = 5;
+  optional bytes hashedUniEmail = 6;
+  optional bytes hashedDOB = 7;
+}
+
+message validateIdentityRes {
+  string tenant = 1;
+  string requesterShadowID = 2;
+  bool isAuthorised = 3;
+  bool success = 4;
+  optional string shadowID = 5;
+  string errorMessage = 6;
+}
