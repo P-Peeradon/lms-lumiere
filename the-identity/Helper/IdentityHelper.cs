@@ -1,3 +1,6 @@
+using Azure;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
@@ -53,10 +56,79 @@ public static class IdentityHelper
         return plaintext;
     }
 
-    public static (byte[] PublicKey, byte[] PrivateKey) GenerateEccKeyPair()
+    public static byte[] GetOrCreateVaultEccPublicKey()
     {
+        // Read the Key Vault URI from environment variables.
+        var vaultUri = Environment.GetEnvironmentVariable("AZURE_KEY_VAULT_URI");
+        if (string.IsNullOrWhiteSpace(vaultUri))
+        {
+            throw new InvalidOperationException("AZURE_KEY_VAULT_URI environment variable is required to initialize ECC key material.");
+        }
+
+        // Read the key name or use a default if none is configured.
+        var keyName = Environment.GetEnvironmentVariable("AZURE_ECC_KEY_NAME") ?? "lms-ecc-key";
+
+        // Create a Key Vault secret client using Azure identity.
+        var secretClient = new SecretClient(new Uri(vaultUri), new DefaultAzureCredential());
+
+        // Use separate secret names for public and private key material.
+        var publicSecretName = $"{keyName}-public";
+        var privateSecretName = $"{keyName}-private";
+
+        try
+        {
+            // Try to read the existing public key from Key Vault.
+            var publicSecret = secretClient.GetSecret(publicSecretName);
+            // Decode the stored Base64 string into raw public key bytes.
+            return Convert.FromBase64String(publicSecret.Value.Value);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            // If the public key secret does not exist, create and store a new key pair.
+            return CreateAndStoreEccKeyPair(secretClient, publicSecretName, privateSecretName);
+        }
+    }
+
+    public static byte[] GetVaultEccPrivateKey()
+    {
+        // Read the Key Vault URI from environment variables.
+        var vaultUri = Environment.GetEnvironmentVariable("AZURE_KEY_VAULT_URI");
+        if (string.IsNullOrWhiteSpace(vaultUri))
+        {
+            throw new InvalidOperationException("AZURE_KEY_VAULT_URI environment variable is required to initialize ECC key material.");
+        }
+
+        // Read the key name or use a default if none is configured.
+        var keyName = Environment.GetEnvironmentVariable("AZURE_ECC_KEY_NAME") ?? "lms-ecc-key";
+
+        // Create a Key Vault secret client using Azure identity.
+        var secretClient = new SecretClient(new Uri(vaultUri), new DefaultAzureCredential());
+
+        // Build the private key secret name and read it from Key Vault.
+        var privateSecretName = $"{keyName}-private";
+        var privateSecret = secretClient.GetSecret(privateSecretName);
+
+        // Decode the stored Base64 string into raw private key bytes.
+        return Convert.FromBase64String(privateSecret.Value.Value);
+    }
+
+    private static byte[] CreateAndStoreEccKeyPair(SecretClient secretClient, string publicSecretName, string privateSecretName)
+    {
+        // Create a new ephemeral ECDH key pair on the NIST P-256 curve.
         using var ecdh = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
-        return (ecdh.ExportSubjectPublicKeyInfo(), ecdh.ExportECPrivateKey());
+
+        // Export the public key as SubjectPublicKeyInfo (standard ASN.1 format).
+        var publicKey = ecdh.ExportSubjectPublicKeyInfo();
+
+        // Export the private key in PKCS#8 format.
+        var privateKey = ecdh.ExportECPrivateKey();
+
+        // Store both public and private keys in Key Vault as Base64 strings.
+        secretClient.SetSecret(publicSecretName, Convert.ToBase64String(publicKey));
+        secretClient.SetSecret(privateSecretName, Convert.ToBase64String(privateKey));
+
+        // Return the public key bytes for immediate use.
+        return publicKey;
     }
 
     public static byte[] generateHMAC(string fieldValue)

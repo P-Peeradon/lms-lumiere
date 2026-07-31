@@ -9,8 +9,6 @@ namespace the_identity.Services;
 public class IdentityService : the_identity.IdentityService.IdentityServiceBase
 {
     private readonly ILogger<IdentityService> _logger;
-    private static readonly (byte[] PublicKey, byte[] PrivateKey) _placeholderEccKeyPair =
-        IdentityHelper.GenerateEccKeyPair();
 
     public IdentityService(ILogger<IdentityService> logger)
     {
@@ -81,7 +79,7 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
         }
 
         var rawPiiPayload = BuildPiiPayload(request);
-        var encryptResult = IdentityHelper.encryptData(Encoding.UTF8.GetBytes(rawPiiPayload), getPlaceholderEccPublicKey());
+        var encryptResult = IdentityHelper.encryptData(Encoding.UTF8.GetBytes(rawPiiPayload), IdentityHelper.GetOrCreateVaultEccPublicKey());
         var responseBlob = ByteString.CopyFrom(Combine(encryptResult.Iv, encryptResult.Tag, encryptResult.EncryptedPayload, encryptResult.EncryptedDataKey));
 
         return Task.FromResult(new encryptedPIIRes
@@ -252,13 +250,6 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
     private static string EscapeForJson(string value)
     {
         return value?.Replace("\\", "\\\\").Replace("\"", "\\\"") ?? string.Empty;
-    }
-
-    private static byte[] getPlaceholderEccPublicKey()
-    {
-        // In a real implementation, store the private key safely in a secure vault
-        // and distribute only the public key to encryptors.
-        return _placeholderEccKeyPair.PublicKey;
     }
 
     private static byte[] Combine(params byte[][] values)
