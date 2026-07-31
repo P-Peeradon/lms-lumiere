@@ -39,7 +39,25 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
     {
         _logger.LogInformation("generateShadowID request received for tenant {Tenant}", request.Tenant);
 
-        var newShadowId = IdentityHelper.generateShadowID();
+        string studentType = "";
+        string studyMode = "";
+
+        if (request.isIntern) {
+            studentType = "intern";
+        } else if (request.isResearch) {
+            studentType = "research";
+            studyMode = "fulltime";
+        } else if (request.isExchange) {
+            studentType = "exchange";
+        } else if (!request.isDomestic) {
+            studentType = "international";
+            studyMode = "fulltime";
+        } else {
+            studentType = "domestic";
+            studyMode = request.isFulltime ? "fulltime" : "parttime";
+        }
+
+        var newShadowId = IdentityHelper.generateShadowID(request.enrolYear, studentType, studyMode);
 
         return Task.FromResult(new GenerateShadowIDRes
         {

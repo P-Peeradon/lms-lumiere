@@ -37,6 +37,7 @@ message generateShadowIDReq {
   bool isIntern = 4;
   bool isResearch = 5;
   int32 enrolYear = 6;
+  optional bool isFulltime = 7; // Domestic only
 }
 
 message generateShadowIDRes {

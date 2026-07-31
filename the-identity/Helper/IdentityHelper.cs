@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -66,11 +67,132 @@ public static class IdentityHelper
         return hmac.ComputeHash(bytes);
     }
 
-    public static string generateShadowID()
+    private static char DeterminePrefix(int year, string studentType, string studyMode)
     {
-        var buffer = new byte[32];
-        RandomNumberGenerator.Fill(buffer);
-        return Convert.ToHexString(buffer).ToLowerInvariant();
+        studentType = studentType.ToLower();
+        studyMode = studyMode.ToLower();
+
+        // Intern always overrides
+        if (studentType == "intern")
+            return 'X';
+
+        // Before AY2023
+        if (year < 2023)
+        {
+            return studentType switch
+            {
+                "domestic" => 'D',
+                "international" => 'W',
+                "exchange" => 'E',
+                _ => throw new ArgumentException("Invalid studentType before 2023.")
+            };
+        }
+
+        // From AY2023 onward
+        if (year >= 2023)
+        {
+            if (studentType == "exchange")
+                return 'S';
+
+            if (studentType == "research")
+                return 'R'; // always full-time
+
+            return studyMode switch
+            {
+                "fulltime" => 'M',
+                "parttime" => 'P',
+                _ => throw new ArgumentException("Invalid studyMode from 2023 onward.")
+            };
+        }
+
+        throw new ArgumentException("Invalid year.");
+    }
+
+    private static char ComputeChecksum(char prefix, string digits7)
+    {
+        char[] ChecksumAlphabet = {'K','L','J','N','P','Q','R','T','U','W','X','Y','Z'};
+        int[] Weights = { 2, 7, 6, 5, 4, 3, 2 };
+
+        int sum = 0;
+
+        for (int i = 0; i < 7; i++)
+        {
+            int digit = digits7[i] - '0';
+            sum += digit * Weights[i];
+        }
+
+        // Apply offsets
+        if (prefix == 'P' || prefix == 'X')
+            sum += 5;
+        else if (prefix == 'R')
+            sum += 4;
+
+        int remainder = sum % 13;
+        return ChecksumAlphabet[remainder];
+    }
+
+    private static string GenerateRandomDigits7()
+    {
+        int number = rng.Next(0, 10_000_000);
+        return number.ToString("D7");
+    }
+
+    public static string GenerateShadowId(
+        int yearOfEnrollment,
+        string studentType,   // domestic, international, exchange, intern, research
+        string studyMode      // fulltime, parttime
+    )
+    {
+        string digits7 = GenerateRandomDigits7();
+        char prefix = DeterminePrefix(yearOfEnrollment, studentType, studyMode);
+        char checksum = ComputeChecksum(prefix, digits7);
+
+        return $"{prefix}{digits7}{checksum}";
+    }
+
+    public static bool validateShadowID(string shadowId)
+    {
+        if (string.IsNullOrWhiteSpace(shadowId) || shadowId.Length != 9)
+        {
+            return false;
+        }
+
+        var prefix = shadowId[0];
+        var yearSegment = shadowId.Substring(1, 2);
+        var randomSegment = shadowId.Substring(3, 7);
+        var checksum = shadowId[8];
+
+        if (!new[] { 'R', 'X', 'P', 'E', 'S' }.Contains(prefix))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(yearSegment, out var yearDigits) || !randomSegment.All(char.IsDigit))
+        {
+            return false;
+        }
+
+        var fullYear = 2000 + yearDigits;
+        if (prefix == 'E' && fullYear > 2023)
+        {
+            return false;
+        }
+
+        if (prefix == 'S' && fullYear <= 2023)
+        {
+            return false;
+        }
+
+        var offset = prefix switch
+        {
+            'R' => 4,
+            'X' => 5,
+            'P' => 5,
+            _ => 0
+        };
+
+        var expectedChecksum = CalculateChecksum(prefix, yearSegment, randomSegment, offset);
+        return checksum == expectedChecksum;
     }
 
     private static byte[] WrapAesKeyWithEccPublicKey(byte[] aesKey, byte[] publicKey)
