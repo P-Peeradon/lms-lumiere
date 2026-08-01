@@ -18,13 +18,13 @@ export default defineConfig({
             connector: "pglite",
             options: {
                 // Persists data to a local file directory inside your project
-                dataDir: './.data/credential' 
+                dataDir: "./.data/credential"
             }
         }
     },
     plugins: [
-        './server/plugins/db-init.ts', 
-        './server/plugins/az-kvault-init.ts', 
+        "./server/plugins/db-init.ts", 
+        "./server/plugins/az-kvault-init.ts", 
         "./server/plugins/amqp-init.ts"
     ]
 });
