@@ -59,7 +59,11 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
             studyMode = request.IsFulltime ? "fulltime" : "parttime";
         }
 
-        var newShadowId = IdentityHelper.generateShadowId(request.EnrolYear, studentType, studyMode);
+        var newShadowId = IdentityHelper.generateShadowId(
+            request.EnrolYear, 
+            studentType, 
+            studyMode ?? "fulltime"
+        );
 
         return Task.FromResult(new generateShadowIDRes
         {
