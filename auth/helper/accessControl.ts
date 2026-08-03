@@ -37,7 +37,14 @@ ac.grant(Role.FacultyAdmin)
 
 ac.grant(Role.CentralAdmin)
     .extend(Role.FacultyAdmin)
-    .readAny("pii", piiFieldTier["tier-A"])
+    .readAny("pii", piiFieldTier["tier-A"]
+        .filter((item: string) => !([
+            "visa", 
+            "OSHC", 
+            "passport", 
+            "TFN"].includes(item))
+        )
+    )
     .createAny("pii", [
         ...piiFieldTier["tier-A"], 
         ...piiFieldTier["tier-B"], 
