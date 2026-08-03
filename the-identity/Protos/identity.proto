@@ -21,13 +21,16 @@ message approvePIIReq {
   string tenant = 1;
   string requesterShadowID = 2;
   string applicantName = 3;
-  string reason = 4;
+  string role = 4;
+  string reason = 5;
 }
 
 message approvePIIRes {
   string tenant = 1;
   string requesterShadowID = 2;
   google.protobuf.Timestamp timestamp = 3;
+  bool status = 4;
+  optional string errorMessage = 5;
 }
 
 message generateShadowIDReq {
@@ -50,50 +53,54 @@ message generateShadowIDRes {
 message encryptedPIIReq {
   string tenant = 1;
   string requesterShadowID = 2; // Who request PII encryption?
-  string ownerShadowID = 3; // Who is the Genuine Owner?
-  string firstname = 4;
-  string lastname = 5; 
-  string DOB = 6; 
-  string phone = 7; 
-  string uniEmail = 8; 
-  string personalEmail = 9; 
-  string address = 10; 
-  string uniID = 11;
-  string nationalID = 12;
-  string nationality = 13;
-  string passportID = 14;
+  string role = 3; // What is the role of the requester? (e.g. central_admin, staff, student)
+  string ownerShadowID = 4; // Who is the Genuine Owner?
+  string firstname = 5;
+  string lastname = 6; 
+  string DOB = 7; 
+  string phone = 8; 
+  string uniEmail = 9; 
+  string personalEmail = 10; 
+  string address = 11; 
+  string uniID = 12;
+  string nationalID = 13;
+  string nationality = 14;
+  string passportID = 15;
 }
 
 message encryptedPIIRes {
   string tenant = 1;
   string requesterShadowID = 2;
   bytes encryptedPIIBlob = 3;
-  string statusMessage = 4;
+  bool status = 4;
+  optional string errorMessage = 5;
 }
 
 message decryptPIIReq {
   string tenant = 1;
   string requesterShadowID = 2;
   string requesterPosition = 3;
-  string ownerShadowID = 4;
-  string reason = 5;
+  string role = 4;
+  string ownerShadowID = 5;
+  string reason = 6;
 }
 
 message decryptPIIRes {
   string tenant = 1;
   bool isAuthorised = 2;
   bool success = 3;
-  string errorMessage = 4;
+  optional string errorMessage = 4;
 }
 
 message hashSearchKeyReq {
   string tenant = 1;
   string requesterShadowID = 2; // Record who request?
-  string ownerShadowID = 3; // Who owns PII?
-  string name = 4;
-  string uniEmail = 5;
-  string DOB = 6;
-  string uniID = 7;
+  string role = 3; // What is the role of the requester? (e.g. central_admin, staff, student)
+  string ownerShadowID = 4; // Who owns PII?
+  string name = 5;
+  string uniEmail = 6;
+  string DOB = 7;
+  string uniID = 8;
 }
 
 message hashSearchKeyRes {
@@ -109,8 +116,9 @@ message revokePIIReq {
   string requestShadowID = 2;
   string ownerShadowID = 3;
   string requesterPosition = 4;
-  bytes evidences = 5;
-  string reason = 6;
+  string role = 5;
+  bytes evidences = 6;
+  string reason = 7;
 }
 
 message revokePIIRes {
@@ -119,7 +127,7 @@ message revokePIIRes {
   bool status = 3;
   bool isAuthority = 4; // Refer to the requester has authority to revoke PII or not.
   string responseMessage = 5;
-  bool isIllegal = 6; // The reason related to the owner illegal act or not, such as impersonate or forged government documents.
+  bool isIllegal = 6; // The reason related to the PII owner's illegal act or not, such as impersonate or forged government documents.
 }
 
 message validateIdentityReq {

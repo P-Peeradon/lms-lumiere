@@ -15,6 +15,13 @@ export enum Role {
     SystemAdmin = "system_admin"
 }
 
+export enum ServiceName {
+    Identity = "the identity",
+    Auth = "auth",
+    Coordinator = "the coordinator",
+    Calculator = "the calculator",
+}
+
 // campus tree structure;
 export const UniCampus: Record<University, string[]> = {
     "University of Melbourne": ["Parkville", "Southbank", "Burnley"],
@@ -124,4 +131,31 @@ export interface SessionObject extends SessionData {
   tenant: University;
   iat: EpochTimeStamp;
   exp: EpochTimeStamp;
+}
+
+/*
+{
+  "event_id": "uuid",
+  "shadow_id": "X8054061K",
+  "event_type": "identity.pii.encrypted",
+  "timestamp": "2026-07-26T14:32:00Z",
+  "payload": { ... },
+  "meta": {
+    "tenant": University Name,
+    "source_service": "identity",
+    "version": "1.0"
+  }
+}
+*/
+export interface EventAMQP {
+    eventID: UUIDTypes;
+    shadowID: ShadowID;
+    eventType: string;
+    timestamp: string;
+    payload: Record<string, unknown>;
+    meta: {
+        tenant: University;
+        sourceService: ServiceName;
+        version: string;
+    }
 }
