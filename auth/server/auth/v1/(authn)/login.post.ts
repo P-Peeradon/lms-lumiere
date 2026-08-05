@@ -95,14 +95,15 @@ export default defineHandler(async (event: H3Event) => {
     const hashedIP = await AuthHelper.hashTokenAndIP(clientIP, tokenIPSecret);
 
     const tokenPayload: JWEPayload = {
-        shadow_id: ShadowID.parseShadowID(shadow_id as string),
-        session_id: sessionID,
-        token_scope: [""],
+        shadowID: ShadowID.parseShadowID(shadow_id as string),
+        sessionID: sessionID,
+        iss: `auth.${tenant}`,
+        aud: ["lumiere"],
         tenant: tenant,
         device_metadata: device,
         role: user_role as Role,
-        issued_at: issue,
-        expiry: issue + (8 * 3600)
+        iat: issue,
+        exp: issue + (8 * 3600)
     };
 
     // Issue token
