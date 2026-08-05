@@ -3,6 +3,11 @@ import { Role } from "./interface.ts";
 
 const ac = new AccessControl();
 
+const entityMap: Record<string, any> = {
+    "pii": "users.pii", // after decrypted the blob.
+    "user": "users" // 
+}
+
 const piiFieldTier = {
     "tier-S": [
         "encryptedPII", "encryptedDataKey", 
