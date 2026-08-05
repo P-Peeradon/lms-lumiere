@@ -83,9 +83,9 @@ export class ShadowID {
 export interface PII {
     firstName: string;
     lastName: string;
-    personal_email: string;
-    uni_email: string;
-    uni_id: string;
+    personalEmail: string;
+    uniEmail: string;
+    uniID: string;
     address: string;
     dob: Date;
     phoneNumber: string;
@@ -98,26 +98,25 @@ export interface PII {
   "iat": 1721970000,
   "exp": 1721973600,
 
-  "shadow_id": "opaque-uuid",
+  "shadow_id": "X8054061K",
   "role": "faculty_admin",
-  "scope": ["faculty.identity.read"],
-  "tenant": "university_enterprise",
+  "tenant": university_name,
 
   "session_id": "uuid",
   "device_id": "opaque-device-id",
   "mfa": true
 }
 */
-
 export interface JWEPayload extends JWTPayload {
-    shadow_id: ShadowID;
+    shadowID: ShadowID;
+    iss: string;
+    aud?: string[];
     role: Role;
-    token_scope: string[];
     tenant: University;
-    session_id: UUIDTypes;
+    sessionID: UUIDTypes;
     device_metadata: string | null;
-    issued_at: EpochTimeStamp;
-    expiry: EpochTimeStamp;
+    iat: EpochTimeStamp;
+    exp: EpochTimeStamp;
 }
 
 // SESSION(session_id, shadow_id, device, hashed_ip, iat, exp, tenant, hashed_token, token_scope)
