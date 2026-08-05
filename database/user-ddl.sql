@@ -1,7 +1,7 @@
 -- DROP TABLE IF EXISTS users;
 CREATE TABLE IF EXISTS users (
     shadow_id CHAR(9) PRIMARY KEY,
-    encrypted_pii BLOB NOT NULL,
+    encrypted_pii BLOB,
     university VARCHAR(100) NOT NULL,
     faculty VARCHAR(80) NOT NULL,
     hashed_dob CHAR(64) NOT NULL UNIQUE,
