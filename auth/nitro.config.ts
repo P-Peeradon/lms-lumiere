@@ -11,7 +11,11 @@ export default defineConfig({
         tokenIPSecret: process.env.TOKEN_IP_SECRET ?? "",
         azVaultURL: process.env.AZURE_VAULT_URL ?? "",
         authKeyPairName: process.env.AUTH_KEYPAIR_NAME ?? "",
-        amqpUrl: process.env.AMQP_URL ?? "amqp://localhost:5672"
+        amqpUrl: process.env.AMQP_URL ?? "amqp://localhost:5672",
+        redisUrl: process.env.REDIS_URL ?? "",
+        redisHost: process.env.REDIS_HOST ?? "127.0.0.1",
+        redisPort: process.env.REDIS_PORT ?? "6379",
+        redisPassword: process.env.REDIS_PASSWORD ?? ""
     },
     database: {
         default: {
@@ -25,6 +29,7 @@ export default defineConfig({
     plugins: [
         "./server/plugins/db-init.ts", 
         "./server/plugins/az-kvault-init.ts", 
-        "./server/plugins/amqp-init.ts"
+        "./server/plugins/amqp-init.ts",
+        "./server/plugins/redis-init.ts"
     ]
 });
