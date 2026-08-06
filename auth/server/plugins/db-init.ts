@@ -24,7 +24,7 @@ export default definePlugin(async (nitroApp: NitroApp) => {
     await db.sql`
         CREATE TABLE IF NOT EXISTS credentials (
         shadow_id CHAR(9) PRIMARY KEY,
-        hashed_username TEXT UNIQUE NOT NULL,
+        username TEXT UNIQUE NOT NULL,
         hashed_password TEXT NOT NULL,
         user_role LMS_Role NOT NULL,
         mfa BOOLEAN NOT NULL
