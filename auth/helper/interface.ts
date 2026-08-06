@@ -122,9 +122,9 @@ export interface JWEPayload extends JWTPayload {
 // SESSION(session_id, shadow_id, device, hashed_ip, iat, exp, tenant, hashed_token, token_scope)
 
 export interface SessionObject extends SessionData {
-  sessionId: UUIDTypes;
-  hashedToken: string;
-  shadowId: ShadowID;
+  sessionID: UUIDTypes; // v7 since this is Redis PK
+  refreshToken: UUIDTypes; // v4 since I want just a random string
+  shadowID: ShadowID;
   hashedIP?: string;
   userAgent?: string;
   tenant: University;
