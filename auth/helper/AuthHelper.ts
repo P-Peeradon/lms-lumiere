@@ -1,12 +1,18 @@
 import bcrypt from "bcryptjs";
-import { createDecipheriv, createHmac, Sign } from 'crypto';
-import type { JWEPayload, Role, SessionObject, ShadowID, University } from "./interface";
+import { createDecipheriv, createHmac } from 'crypto';
+import type { 
+    JWEPayload, 
+    Role, 
+    SessionObject, 
+    ShadowID, 
+    University 
+} from "./interface";
 import { CompactEncrypt, importJWK, jwtVerify, SignJWT } from "jose";
 import { DefaultAzureCredential } from "@azure/identity";
-import { CryptographyClient, KeyClient } from "@azure/keyvault-keys";
+import { CryptographyClient } from "@azure/keyvault-keys";
 import { useRuntimeConfig } from "nitro/runtime-config";
 import { globalPublicJwk, targetKeyId } from "#server/plugins/az-kvault-init.ts";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as UUIDv4, v7 as UUIDv7, type UUIDTypes } from 'uuid';
 
 export class ValueError extends Error {
     constructor(message: string, options?: ErrorOptions) {
@@ -24,16 +30,13 @@ class AuthHelper {
     private static config = useRuntimeConfig();
     private static vaultUrl = this.config.azVaultURL;
     private static credential = new DefaultAzureCredential();
-    private static readonly sessionTime: Record<Role, number> = {
-        "student": 8 * 3600,
-        "instructor": 4 * 3600,
-        "faculty_admin": 4 * 3600,
-        "central_admin": 3 * 3600,
-        "system_admin": 3 * 3600
+    private static readonly accessTime: Record<Role, number> = {
+        "student": 1 * 3600,
+        "instructor": 3 * 3600,
+        "faculty_admin": 3 * 3600,
+        "central_admin": 4 * 3600,
+        "system_admin": 8 * 3600
     }
-
-    // 1. Initialize our Azure Structural Key Client
-    private static keyClient = new KeyClient(this.vaultUrl, this.credential);
 
     static async hashPassword(rawPassword: string): Promise<string> {
         const lowerCase: RegExp = /[a-z]+/;
@@ -61,7 +64,7 @@ class AuthHelper {
         return hashedToken;
     }
 
-    static async signToken(payload: JWEPayload, tenant: University, jweSecret: string): Promise<string> {
+    static async signToken(payload: JWEPayload, tenant: University, jweSecret: string, role: Role): Promise<string> {
         const secret = new TextEncoder().encode(jweSecret);
 
         const token: string = await new SignJWT(payload)
@@ -69,6 +72,7 @@ class AuthHelper {
             .setIssuer(tenant)
             .setAudience(tenant)
             .setIssuedAt()
+            .setExpirationTime(this.accessTime[role])
             .sign(secret);
 
         return token;
@@ -96,32 +100,13 @@ class AuthHelper {
         return encryptedJwe;
     }
 
-    static async refreshToken(payload: JWEPayload, tenant: University, jweSecret: string): Promise<string> {
-        const secret = new TextEncoder().encode(jweSecret);
-        const now = new Date().getTime();
-        const expiry = now + 7 * 24 * 3600 * 1000;
+    // Edit please. Refresh token is the token for login user.
+    // It is used to verify that this user has session, and for request the access token.
+    // Appearance, a random string without any meaning, but the meaning is its metadata.
+    static generateRefreshToken(): UUIDTypes {
+        const refreshToken: UUIDTypes = UUIDv4();
 
-        const { aud, device_metadata, ipAddress, ip, ...payloadWithoutSensitive } = payload as JWEPayload & {
-            aud?: string | string[];
-            ipAddress?: string;
-            ip?: string;
-        };
-
-        const refreshPayload = {
-            ...payloadWithoutSensitive,
-            device_metadata: null,
-            issued_at: now,
-            expiry,
-        } as JWEPayload;
-
-        const token: string = await new SignJWT(refreshPayload)
-            .setProtectedHeader({ alg: 'hs256' })
-            .setIssuer(tenant ?? payload.tenant)
-            .setIssuedAt()
-            .setExpirationTime('7d')
-            .sign(secret);
-
-        return token;
+        return refreshToken;
     }
 
     static async decryptToken(jweToken: string, jweSecret: string): Promise<JWEPayload> {
@@ -186,23 +171,23 @@ class AuthHelper {
 
     static async generateSession(
         hashedIP: string, 
-        hashedToken: string, 
-        shadowId: ShadowID, 
-        role: Role, 
+        shadowID: ShadowID, 
         tenant: University,
-        isRefresh: boolean = false, 
         device?: string): Promise<SessionObject> {
-        const sessionId = uuidv4();
-        const lifespan: number = isRefresh ? 7 * 24 * 3600 : this.sessionTime[role];
+        const sessionID = UUIDv7();
+        const refreshToken = this.generateRefreshToken();
         
-        const issuedAt: EpochTimeStamp = new Date().getTime() * 1000;
-        const expiredAt: EpochTimeStamp = issuedAt + lifespan;
-
+        const issuedAt: EpochTimeStamp = new Date().getTime() / 1000;
+        const expiredAt: EpochTimeStamp = issuedAt + (7 * 24 * 3600);
+        
+        // This is for recording session for the refresh token.
+        // It tells that user has session.
         const session: SessionObject = {
-            sessionId,
+            sessionID, // Primary Key
+            refreshToken,
             tenant,
-            shadowId,
-            hashedToken,
+            shadowID, // Surrogate Key
+            device,
             ipAddress: hashedIP,
             iat: issuedAt,
             exp: expiredAt
