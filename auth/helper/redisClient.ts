@@ -164,7 +164,7 @@ export async function findRedisJsonByAttribute<T>(pattern: string, attributePath
   const iterator = client.scanIterator({ MATCH: pattern, COUNT: 100 });
 
   for await (const key of iterator) {
-    const rawValue = await client.get(key as string);
+    const rawValue = await client.get((key as unknown) as string);
 
     if (!rawValue) {
       continue;
@@ -173,7 +173,7 @@ export async function findRedisJsonByAttribute<T>(pattern: string, attributePath
     try {
       const parsed = JSON.parse(rawValue) as T;
       if (matchesAttributeValue(parsed, attributePath, expectedValue)) {
-        matches[key as string] = parsed;
+        matches[(key as unknown) as string] = parsed;
       }
     } catch {
       continue;
