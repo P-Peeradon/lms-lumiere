@@ -28,10 +28,10 @@ export default defineConfig({
         iam_database: {
             connector: "mysql2",
             options: {
-                host: process.env.USERS_DB_HOST || "localhost",
-                user: process.env.USERS_DB_USER,
-                password: process.env.USERS_DB_PASSWORD,
-                database: "users_db",
+                host: process.env.MYSQL_HOST || "localhost",
+                user: process.env.MYSQL_USER,
+                password: process.env.MYSQL_PASSWORD,
+                database: "lumiere_iam_database",
             }
         }
     },
