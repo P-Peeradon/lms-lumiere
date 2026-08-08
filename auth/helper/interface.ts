@@ -125,6 +125,7 @@ export interface SessionObject extends SessionData {
   sessionID: UUIDTypes; // v7 since this is Redis PK
   refreshToken: UUIDTypes; // v4 since I want just a random string
   shadowID: ShadowID;
+  hashedToken: string;
   hashedIP?: string;
   userAgent?: string;
   tenant: University;
