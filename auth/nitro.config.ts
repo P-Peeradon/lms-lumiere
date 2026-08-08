@@ -24,6 +24,15 @@ export default defineConfig({
                 // Persists data to a local file directory inside your project
                 dataDir: "./.data/credential"
             }
+        },
+        iam_database: {
+            connector: "mysql2",
+            options: {
+                host: process.env.USERS_DB_HOST || "localhost",
+                user: process.env.USERS_DB_USER,
+                password: process.env.USERS_DB_PASSWORD,
+                database: "users_db",
+            }
         }
     },
     plugins: [
