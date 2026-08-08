@@ -7,6 +7,7 @@ import { useDatabase } from 'nitro/database';
 import { useRuntimeConfig } from 'nitro/runtime-config';
 import bcrypt from 'bcryptjs';
 import { timingSafeEqual } from 'crypto';
+import { setRedisJson } from '#helper/redisClient.ts';
 
 const WHITELIST_TENANT = new Set(["university_of_melbourne", "university_of_sydney"]);
 
@@ -25,6 +26,7 @@ interface LoginPayload {
 
 export default defineHandler(async (event: H3Event) => {
     const db = useDatabase();
+    const iam = useDatabase("iam_database")
     const config = useRuntimeConfig();
     const { jweSecret, hmacSecret, tokenIPSecret } = config;
     const body = await readBody(event);
@@ -107,17 +109,38 @@ export default defineHandler(async (event: H3Event) => {
     };
 
     // Issue token
-    const signedJWT = await AuthHelper.signToken(tokenPayload, tenant, jweSecret);
-    const jweToken = await AuthHelper.encryptToken(signedJWT);
-    const hashedToken = await AuthHelper.hashTokenAndIP(jweToken, tokenIPSecret)
+    const signedJWT = await AuthHelper.signToken(tokenPayload, tenant, jweSecret, user_role);
+    const jweToken = await AuthHelper.encryptToken(signedJWT); // Access token
+    const hashedToken = await AuthHelper.hashTokenAndIP(jweToken, tokenIPSecret);
 
     // Record session in Redis
     const newSession: SessionObject = await AuthHelper.generateSession(
-        hashedIP, hashedToken, shadow_id, user_role, tenant
+        hashedToken, shadow_id, tenant
     );
 
-    return new HTTPResponse("Login Success", {
-        status: 200,
-        statusText: "OK"
-    })
+    let isSuccess;
+
+    try {
+        isSuccess = await setRedisJson<SessionObject>(newSession.sessionID.toString(), newSession, 7 * 24 * 3600);
+
+        if (!isSuccess) throw new HTTPError("Failure to record session in Redis.", { 
+            status: 500,
+            statusText: "Internal Server Error"
+        });
+
+    } catch (error: any) {
+        throw new HTTPError(error?.message, {
+            status: 500,
+            statusText: "Internal Server Error"
+        });
+    }
+
+    event.res.status = 200;
+
+    return {
+        hashedIP,
+        message: "Login successful",
+        token: jweToken,
+        shadowID: shadow_id
+    }
 });

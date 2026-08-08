@@ -3,7 +3,9 @@ import { defineHandler, type H3Event } from 'nitro';
 import { HTTPError, readBody } from 'nitro/h3';
 import * as AmqpSender from "#network_socket/amqpSender.ts"
 import { ShadowID } from '#helper/interface.ts';
+import { setRedisJson } from '#helper/redisClient.ts';
 import client from "#network_socket/gRPCSocket.ts";
+import { useDatabase } from 'nitro/database';
 
 interface RegisterBody {
     firstName: string;
@@ -22,6 +24,7 @@ interface RegisterBody {
 export default defineHandler(async (event: H3Event) => {
     const auth_token: string | null = event.req.headers.get("Authorization");
     const body = (await readBody(event)) as RegisterBody;
+    const db = useDatabase();
     
     if (!auth_token || !auth_token.startsWith("Bearer ")) {
         throw new HTTPError("Invalid token", {
@@ -55,6 +58,8 @@ export default defineHandler(async (event: H3Event) => {
     const requesterShadowID = ShadowID.parseShadowID(shadow_id);
 
     const { newUserShadowID, ...personalData } = body;
+    const { firstName, lastName } = personalData;
+    const username = `${firstName[0]}${lastName}`.toLowerCase();
 
     try {
         const rpcResponse = await client.encryptedPII({
@@ -65,7 +70,7 @@ export default defineHandler(async (event: H3Event) => {
             ...personalData
         }, { bearerToken: `Bearer ${auth_token}`});
     } catch (error: any) {
-        throw new HTTPError(error.message ?? "Unavailable to decrypt data", {
+        throw new HTTPError(error.message ?? "Unavailable to encrypt data", {
             status: 502,
             statusText: "Service Unavailable"
         })
@@ -84,5 +89,25 @@ export default defineHandler(async (event: H3Event) => {
         eventPayload,
         tenant
     );
-    
+
+    // Save user credential into internal database.
+    try{
+        await db.exec(`INSERT INTO credentials (shadow_id, username, user_role) 
+                    VALUES (${newUserShadowID}, ${username}, 'student')`);
+    } catch (error: any) {
+        throw new HTTPError(error?.message, {
+            status: 503,
+            statusText: "Service Unavailable"
+        });
+    }
+
+    // Save user data in the MySQL
+
+    event.res.status = 201;
+
+    return {
+        success: true,
+        message: 'User registration completed',
+        shadowID: newUserShadowID
+    };
 });
