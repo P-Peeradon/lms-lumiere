@@ -133,3 +133,52 @@ export async function getRedisJson<T>(key: string): Promise<T | null> {
 
   return JSON.parse(rawValue) as T;
 }
+
+function matchesAttributeValue(value: unknown, attributePath: string, expectedValue: unknown): boolean {
+  if (typeof attributePath !== 'string' || attributePath.length === 0) {
+    return false;
+  }
+
+  const pathParts = attributePath.split('.');
+  let current: unknown = value;
+
+  for (const part of pathParts) {
+    if (current && typeof current === 'object' && part in current) {
+      current = (current as Record<string, unknown>)[part];
+    } else {
+      return false;
+    }
+  }
+
+  return current === expectedValue;
+}
+
+export async function findRedisJsonByAttribute<T>(pattern: string, attributePath: string, expectedValue: unknown): Promise<Record<string, T>> {
+  const client = await getRedisClient();
+
+  if (!client) {
+    return {};
+  }
+
+  const matches: Record<string, T> = {};
+  const iterator = client.scanIterator({ MATCH: pattern, COUNT: 100 });
+
+  for await (const key of iterator) {
+    const rawValue = await client.get(key as string);
+
+    if (!rawValue) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(rawValue) as T;
+      if (matchesAttributeValue(parsed, attributePath, expectedValue)) {
+        matches[key as string] = parsed;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return matches;
+}
