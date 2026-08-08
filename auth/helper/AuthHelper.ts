@@ -170,9 +170,10 @@ class AuthHelper {
     }
 
     static async generateSession(
-        hashedIP: string, 
+        hashedToken: string,
         shadowID: ShadowID, 
         tenant: University,
+        hashedIP?: string, 
         device?: string): Promise<SessionObject> {
         const sessionID = UUIDv7();
         const refreshToken = this.generateRefreshToken();
@@ -185,6 +186,7 @@ class AuthHelper {
         const session: SessionObject = {
             sessionID, // Primary Key
             refreshToken,
+            hashedToken,
             tenant,
             shadowID, // Surrogate Key
             device,
