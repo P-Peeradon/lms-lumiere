@@ -134,48 +134,75 @@ export async function getRedisJson<T>(key: string): Promise<T | null> {
   return JSON.parse(rawValue) as T;
 }
 
+/**
+ * Check whether a nested attribute within a parsed JSON value matches the expected value.
+ *
+ * Steps:
+ * 1. Validate that attributePath is a non-empty string.
+ * 2. Split the attributePath by '.' to support nested object lookup.
+ * 3. Traverse the parsed object following each path segment.
+ * 4. If any segment does not exist, return false.
+ * 5. After traversal, compare the final value to expectedValue using strict equality.
+ */
 function matchesAttributeValue(value: unknown, attributePath: string, expectedValue: unknown): boolean {
+  // If the attribute path is not a valid non-empty string, we cannot match anything.
   if (typeof attributePath !== 'string' || attributePath.length === 0) {
     return false;
   }
 
+  // Split nested attribute path like "user.email" into ['user', 'email'].
   const pathParts = attributePath.split('.');
   let current: unknown = value;
 
   for (const part of pathParts) {
+    // Ensure the current value is an object and contains the next property.
     if (current && typeof current === 'object' && part in current) {
       current = (current as Record<string, unknown>)[part];
     } else {
+      // If any path segment is missing, the attribute cannot match.
       return false;
     }
   }
 
+  // Compare the found nested value with the expected value using strict equality.
   return current === expectedValue;
 }
 
+/**
+ * Find Redis keys whose JSON values contain an attribute with a matching value.
+ */
 export async function findRedisJsonByAttribute<T>(pattern: string, attributePath: string, expectedValue: unknown): Promise<Record<string, T>> {
+  // Get or initialize the Redis client first.
   const client = await getRedisClient();
 
+  // If Redis is unavailable, return an empty object instead of throwing.
   if (!client) {
     return {};
   }
 
   const matches: Record<string, T> = {};
+  // Use scanIterator to iterate over keys matching the pattern in a memory-efficient way.
   const iterator = client.scanIterator({ MATCH: pattern, COUNT: 100 });
 
   for await (const key of iterator) {
+    // Read the raw string value for this Redis key.
     const rawValue = await client.get((key as unknown) as string);
 
+    // If no value exists, skip this key.
     if (!rawValue) {
       continue;
     }
 
     try {
+      // Parse the stored string as JSON.
       const parsed = JSON.parse(rawValue) as T;
+
+      // If the nested attribute matches, add this key & parsed object to the result.
       if (matchesAttributeValue(parsed, attributePath, expectedValue)) {
         matches[(key as unknown) as string] = parsed;
       }
     } catch {
+      // If JSON.parse fails, skip this key and continue scanning.
       continue;
     }
   }
