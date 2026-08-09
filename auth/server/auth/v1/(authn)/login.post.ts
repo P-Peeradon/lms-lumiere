@@ -1,4 +1,4 @@
-import { defineHandler, HTTPResponse, type H3Event } from 'nitro';
+import { defineHandler, type H3Event } from 'nitro';
 import { getRequestIP, HTTPError, readBody } from 'nitro/h3';
 import { Role, ShadowID, University, type JWEPayload, type SessionObject } from '#helper/interface.ts';
 import { v4 as uuidv4, type UUIDTypes } from 'uuid';
