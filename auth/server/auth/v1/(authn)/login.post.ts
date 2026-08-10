@@ -3,7 +3,7 @@ import { getRequestIP, HTTPError, readBody } from 'nitro/h3';
 import { Role, ShadowID, University, type JWEPayload, type SessionObject } from '#helper/interface.ts';
 import { v4 as uuidv4, type UUIDTypes } from 'uuid';
 import AuthHelper from '#helper/AuthHelper.ts';
-import { useDatabase } from 'nitro/database';
+import { queryPgLite } from '#helper/dbClient.ts';
 import { useRuntimeConfig } from 'nitro/runtime-config';
 import bcrypt from 'bcryptjs';
 import { timingSafeEqual } from 'crypto';
@@ -25,8 +25,6 @@ interface LoginPayload {
 }
 
 export default defineHandler(async (event: H3Event) => {
-    const db = useDatabase();
-    const iam = useDatabase("iam_database")
     const config = useRuntimeConfig();
     const { jweSecret, hmacSecret, tokenIPSecret } = config;
     const body = await readBody(event);
@@ -57,11 +55,11 @@ export default defineHandler(async (event: H3Event) => {
 
     // compare password and username
     try {
-        const statement = db.prepare(`SELECT shadow_id, hashed_username, hashed_password, user_role
+        const rows = await queryPgLite<any>(`SELECT shadow_id, hashed_username, hashed_password, user_role
             FROM credentials
-            WHERE hashed_username = encode(hmac(?, '', 'sha256'), 'base64');`)
+            WHERE hashed_username = encode(hmac(?, '', 'sha256'), 'base64');`, [username]);
 
-        row = (await statement.get(username)) as UserPacket;
+        if (Array.isArray(rows) && rows.length > 0) row = rows[0] as UserPacket;
     } catch {
         throw new HTTPError("Error querying data", {
             status: 500,
@@ -113,17 +111,28 @@ export default defineHandler(async (event: H3Event) => {
     const jweToken = await AuthHelper.encryptToken(signedJWT); // Access token
     const hashedToken = await AuthHelper.hashTokenAndIP(jweToken, tokenIPSecret);
 
-    // Record session in Redis
+    // Record session in Redis using revised key schema
     const newSession: SessionObject = await AuthHelper.generateSession(
         hashedToken, shadow_id, tenant
     );
 
+    // Hash refresh token before storing mapping
+    const refreshHash = await AuthHelper.hashTokenAndIP(newSession.refreshToken as unknown as string, config.hmacSecret);
+
     let isSuccess;
 
     try {
-        isSuccess = await setRedisJson<SessionObject>(newSession.sessionID.toString(), newSession, 7 * 24 * 3600);
+        // session:{sessionID} => sessionObject
+        isSuccess = await setRedisJson<SessionObject>(`session:${newSession.sessionID.toString()}`, newSession, 7 * 24 * 3600);
 
         if (!isSuccess) throw new HTTPError("Failure to record session in Redis.", { 
+            status: 500,
+            statusText: "Internal Server Error"
+        });
+
+        // refresh:{hash} => sessionID (string) for O(1) lookup
+        const mapSaved = await setRedisJson<string>(`refresh:${refreshHash}`, newSession.sessionID.toString(), 7 * 24 * 3600);
+        if (!mapSaved) throw new HTTPError("Failure to record refresh mapping in Redis.", { 
             status: 500,
             statusText: "Internal Server Error"
         });

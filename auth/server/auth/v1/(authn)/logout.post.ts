@@ -1,5 +1,7 @@
 import type { SessionObject, ShadowID } from "#helper/interface.ts";
 import { deleteRedisValue, findRedisJsonByAttribute } from "#helper/redisClient.ts";
+import AuthHelper from '#helper/AuthHelper.ts';
+import { useRuntimeConfig } from 'nitro/runtime-config';
 import axios from "axios";
 import { defineHandler, HTTPError, type H3Event } from "nitro";
 import type { UUIDTypes } from "uuid";
@@ -30,9 +32,19 @@ export default defineHandler(async (event: H3Event) => {
                 });
             }
             
-            const sessionIDs: string[] = Object.keys(activeSession);
+            const sessionEntries = Object.entries(activeSession) as [string, SessionObject][];
+            const config = useRuntimeConfig();
 
-            await Promise.all(sessionIDs.map(id => deleteRedisValue(id)));
+            await Promise.all(sessionEntries.map(async ([id, sess]) => {
+                // delete refresh mapping if present
+                try {
+                    if (sess && sess.refreshToken) {
+                        const refreshHash = await AuthHelper.hashTokenAndIP(sess.refreshToken as unknown as string, config.hmacSecret);
+                        await deleteRedisValue(`refresh:${refreshHash}`);
+                    }
+                } catch {}
+                await deleteRedisValue(id);
+            }));
 
             event.res.status = 204;
             event.res.statusText = "No Content";
