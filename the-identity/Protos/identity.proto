@@ -72,7 +72,7 @@ message encryptedPIIRes {
   string tenant = 1;
   string requesterShadowID = 2;
   bytes encryptedPIIBlob = 3;
-  bool status = 4;
+  bool success = 4;
   optional string errorMessage = 5;
 }
 
