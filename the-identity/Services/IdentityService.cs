@@ -91,7 +91,7 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
             Tenant = request.Tenant,
             RequesterShadowID = request.RequesterShadowID,
             EncryptedPIIBlob = responseBlob,
-            StatusMessage = "PII encrypted with AES-GCM and ECC key wrap placeholder." 
+            success = true
         });
     }
 

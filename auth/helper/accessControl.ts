@@ -1,11 +1,21 @@
 import { AccessControl } from "accesscontrol";
-import { Role } from "./interface.ts";
+import { Role, University } from "./interface.ts";
 
 const ac = new AccessControl();
 
-const entityMap: Record<string, any> = {
-    "pii": "users.pii", // after decrypted the blob.
-    "user": "users" // 
+export interface ResolvedUserAttributes {
+    pii: string | object; // Plaintext decrypted PII (can be either parsed or unparsed)
+    searchKeys: {
+        hashed_dob: string;
+        uni_id: string;
+        hashed_firstname: string;
+        uni_email: string;
+    };
+    user: {
+        shadow_id: string;
+        university: University;
+        faculty: string;
+    };
 }
 
 const piiFieldTier = {
@@ -38,7 +48,6 @@ ac.grant(Role.FacultyAdmin)
         ...piiFieldTier["tier-C"], 
         ...piiFieldTier["tier-B"]
     ]);
-
 
 ac.grant(Role.CentralAdmin)
     .extend(Role.FacultyAdmin)
