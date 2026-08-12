@@ -8,6 +8,14 @@ namespace the_identity.Helper;
 
 public static class IdentityHelper
 {
+    private static ECDiffieHellman? _localEcdh;
+
+    private static ECDiffieHellman GetOrCreateLocalEcdh()
+    {
+        _localEcdh ??= ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
+        return _localEcdh;
+    }
+
     public static string validateDocument(IDictionary<string, string> documentFields)
     {
         // Placeholder for zod-style structural checks, regex validation, checksum, contextual rules,
@@ -57,11 +65,11 @@ public static class IdentityHelper
 
     public static byte[] GetOrCreateVaultEccPublicKey()
     {
-        // Read the Key Vault URI from environment variables.
+        // Allow local development without Azure Key Vault configured.
         var vaultUri = Environment.GetEnvironmentVariable("AZURE_KEY_VAULT_URI");
         if (string.IsNullOrWhiteSpace(vaultUri))
         {
-            throw new InvalidOperationException("AZURE_KEY_VAULT_URI environment variable is required to initialize ECC key material.");
+            return GetOrCreateLocalEcdh().ExportSubjectPublicKeyInfo();
         }
 
         // Read the key name or use a default if none is configured.
@@ -90,11 +98,11 @@ public static class IdentityHelper
 
     public static byte[] GetVaultEccPrivateKey()
     {
-        // Read the Key Vault URI from environment variables.
+        // Allow local development without Azure Key Vault configured.
         var vaultUri = Environment.GetEnvironmentVariable("AZURE_KEY_VAULT_URI");
         if (string.IsNullOrWhiteSpace(vaultUri))
         {
-            throw new InvalidOperationException("AZURE_KEY_VAULT_URI environment variable is required to initialize ECC key material.");
+            return GetOrCreateLocalEcdh().ExportECPrivateKey();
         }
 
         // Read the key name or use a default if none is configured.

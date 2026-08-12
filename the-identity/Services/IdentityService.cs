@@ -91,7 +91,7 @@ public class IdentityService : the_identity.IdentityService.IdentityServiceBase
             Tenant = request.Tenant,
             RequesterShadowID = request.RequesterShadowID,
             EncryptedPIIBlob = responseBlob,
-            success = true
+            Success = true
         });
     }
 
